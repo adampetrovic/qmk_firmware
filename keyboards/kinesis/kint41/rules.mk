@@ -10,3 +10,7 @@ ARMV = 7
 BOOTLOADER = halfkay
 
 FIRMWARE_FORMAT = hex
+
+
+# makes booting faster - https://github.com/qmk/qmk_firmware/pull/23054/files
+OPT_DEFS += -DCORTEX_ENABLE_WFI_IDLE=FALSE
