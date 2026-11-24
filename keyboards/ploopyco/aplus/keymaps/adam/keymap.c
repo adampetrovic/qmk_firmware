@@ -91,6 +91,16 @@ enum {
     LAYER_CONTROL
 };
 
+/* Cmd+kc on macOS and unknown hosts (matches the redo case), Ctrl+kc on Windows/Linux. */
+static void tap_platform_shortcut(uint16_t kc) {
+    if ( detected_host_os() == OS_WINDOWS || detected_host_os() == OS_LINUX ) {
+        tap_code16( C(kc) );
+    }
+    else {
+        tap_code16( G(kc) );
+    }
+}
+
 /* Override default function in submodule code so that we can blink whenever
    a successful gesture is registered. */
 void pointing_device_gestures_trigger(uint8_t direction) {
@@ -112,13 +122,13 @@ void pointing_device_gestures_trigger(uint8_t direction) {
             }
             break;
         case 1: /* South-East, Paste. */
-            tap_code16( C(KC_V) );
+            tap_platform_shortcut( KC_V );
             break;
-        case 2: /* South, Copy. */
-            tap_code16( C(KC_C) );
+        case 2: /* South, End (scroll to bottom). */
+            tap_code16( KC_END );
             break;
         case 3: /* South-West, Cut. */
-            tap_code16( C(KC_X) );
+            tap_platform_shortcut( KC_X );
             break;
         case 4: /* West, Previous Virtual Desktop. */
             /* On Windows, send CTRL + LGUI + LEFT. */
@@ -135,10 +145,10 @@ void pointing_device_gestures_trigger(uint8_t direction) {
             }
             break;
         case 5: /* North-West, Undo. */
-            tap_code16( C(KC_Z) );
+            tap_platform_shortcut( KC_Z );
             break;
-        case 6: /* North, Play/Pause Audio. */
-            tap_code16( KC_MEDIA_PLAY_PAUSE );
+        case 6: /* North, Home (scroll to top). */
+            tap_code16( KC_HOME );
             break;
         case 7: /* North-East, Redo. */
             /* On Windows/Linux, send CTRL + Y. */
@@ -172,15 +182,17 @@ const uint16_t PROGMEM pointing_device_gestures[NUM_GESTURE_DIRECTIONS] =
 /* Keymap. */
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Base layer with all of the mouse-related stuff for everyday use.
-    // Adjusted for use rotated 180 degrees: Left/Right click and Back/Middle swapped
-    // so the physical bottom-left button is Left Click.
-    [LAYER_NAV_RIGHT_HANDED] = LAYOUT(  MS_BTN3, MS_BTN5, PKC_DRAG_SCROLL, MS_BTN1, 
+    // Laid out for the trackball rotated 180 degrees (wheels on the far edge).
+    // Argument order is matrix [0,1] [0,2] [0,3] [0,4] / [0,0] [0,5] / [0,6] [0,7],
+    // which in the rotated view is: lower-right, near-right, near-left, lower-left /
+    // upper-right (bootmagic key), upper-left / far-right wheel, far-left wheel.
+    [LAYER_NAV_RIGHT_HANDED] = LAYOUT(  MS_BTN5, PKC_GESTURE, PKC_DRAG_SCROLL, MS_BTN1, 
                                         MS_BTN2, MS_BTN4, 
-                                        PKC_GESTURE, TG(LAYER_CONTROL) ),
+                                        TG(LAYER_CONTROL), MS_BTN3 ),
     // Mirror-image of right-handed layout for lefties.
-    [LAYER_NAV_LEFT_HANDED] = LAYOUT(   MS_BTN2, PKC_DRAG_SCROLL, MS_BTN4, MS_BTN5, 
-                                        MS_BTN3, MS_BTN1, 
-                                        TG(LAYER_CONTROL), PKC_GESTURE ),
+    [LAYER_NAV_LEFT_HANDED] = LAYOUT(   MS_BTN1, PKC_DRAG_SCROLL, PKC_GESTURE, MS_BTN5, 
+                                        MS_BTN4, MS_BTN2, 
+                                        MS_BTN3, TG(LAYER_CONTROL) ),
     // Layer for all of the customization options.
     [LAYER_CONTROL] = LAYOUT(           PKC_BLINKY_DPI_CONFIG, PKC_ADJUST_LED_BRIGHTNESS, PKC_TGL_VERT_SCRL, PKC_TGL_HORIZ_SCRL,
                                         PKC_TGL_MIRROR, PKC_TGL_DRAG_SCRL, 
@@ -444,6 +456,17 @@ int16_t rightwheel_volume_scroll_tick = 0;
 uint32_t leftwheel_timeout = 0;
 uint32_t rightwheel_timeout = 0;
 
+/* With POINTING_DEVICE_ROTATION_180 the device is used rotated, so sensor D1
+   ("rightwheel", matrix [0,7]) is the far-left wheel. True when D1 drives
+   vertical scroll and D0 horizontal. */
+static bool vertical_scroll_on_d1(void) {
+#ifdef POINTING_DEVICE_ROTATION_180
+    return !user_config.left_handed;
+#else
+    return user_config.left_handed;
+#endif
+}
+
 report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
     // throttle reads
     if (timer_elapsed32(last_scroll_time) > 10) {
@@ -458,6 +481,13 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
         int16_t rightwheel_delta = calculate_wheel_delta( rightwheel_rawangle, rightwheel_current_position );
         rightwheel_current_position = rightwheel_rawangle;
+
+#ifdef POINTING_DEVICE_ROTATION_180
+        /* The rotated pose reverses the far-right wheel (D0) under the finger.
+           The far-left wheel (D1) is deliberately left unreversed, as requested. */
+        leftwheel_delta  = -leftwheel_delta;
+#endif
+        const bool d1_vertical = vertical_scroll_on_d1();
 
         /* If either wheel moved, we reset the timeout counter. Else, we start 
            counting inactivity. */
@@ -539,7 +569,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
             leftwheel_arrow_scroll_tick += leftwheel_delta;
             rightwheel_arrow_scroll_tick += rightwheel_delta;
 
-            if( user_config.left_handed ) {
+            if( d1_vertical ) {
                 if( leftwheel_arrow_scroll_tick > TMAG5273_HORIZ_SCROLL_TICK_SIZE ) {
                     tap_code(KC_RIGHT);
                     leftwheel_arrow_scroll_tick = 0;
@@ -573,7 +603,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
             leftwheel_arrow_scroll_tick += leftwheel_delta;
             rightwheel_arrow_scroll_tick += rightwheel_delta;
 
-            if( user_config.left_handed ) {
+            if( d1_vertical ) {
                 if( rightwheel_arrow_scroll_tick > TMAG5273_VERT_SCROLL_TICK_SIZE ) {
                     tap_code(KC_DOWN);
                     rightwheel_arrow_scroll_tick = 0;
@@ -605,7 +635,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
             if ( leftwheel_deadzone_distance > (TMAG5273_WHEEL_DEADZONE - 10) ||
                  leftwheel_deadzone_distance < (-TMAG5273_WHEEL_DEADZONE + 10)) {
 
-                if( user_config.left_handed ) {
+                if( d1_vertical ) {
                     if( !user_config.horizontal_scroll_arrows ) {
                         mouse_report.h = leftwheel_delta / TMAG5273_HORIZONAL_WHEEL_SPEED_DIV;
                     }
@@ -618,7 +648,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
             if ( rightwheel_deadzone_distance > (TMAG5273_WHEEL_DEADZONE - 10) ||
                  rightwheel_deadzone_distance < (-TMAG5273_WHEEL_DEADZONE + 10)) {
 
-                if( user_config.left_handed ) {
+                if( d1_vertical ) {
                     mouse_report.v = -rightwheel_delta / TMAG5273_VERTICAL_WHEEL_SPEED_DIV;
                 }
                 else {
@@ -638,7 +668,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
             leftwheel_lowres_scroll_tick += leftwheel_delta;
             rightwheel_lowres_scroll_tick += rightwheel_delta;
 
-            if( user_config.left_handed ) {
+            if( d1_vertical ) {
                 if( leftwheel_lowres_scroll_tick > TMAG5273_LOWRES_TICK_SIZE ) {
                     if( !user_config.horizontal_scroll_arrows ) {
                         mouse_report.h = 1;
@@ -691,7 +721,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
         /* Check left knob. */
         if( matrix_is_on(0,6) ) {
-            if( user_config.left_handed ) {
+            if( d1_vertical ) {
                 mouse_report.h = 0;
             }
             else {
@@ -700,7 +730,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
         }
         /* Check right knob. */
         if( matrix_is_on(0,7) ) {
-            if( user_config.left_handed ) {
+            if( d1_vertical ) {
                 mouse_report.v = 0;
             }
             else {

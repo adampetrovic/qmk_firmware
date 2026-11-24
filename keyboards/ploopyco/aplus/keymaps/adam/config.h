@@ -21,3 +21,20 @@
 #define DYNAMIC_KEYMAP_LAYER_COUNT 8
 /* Rotate pointer motion by 180 degrees */
 #define POINTING_DEVICE_ROTATION_180
+
+/* Linear sensor output; macOS applies the pointer acceleration curve.
+   Avoid 900/1700/2500: reading those CPI values can upset the PMW3360. */
+#define PLOOPY_DPI_OPTIONS { 400, 600, 800, 1200, 1600 }
+#define PLOOPY_DPI_DEFAULT 1
+
+/* macOS does not honour the hi-res wheel multiplier, so each drag scroll unit
+   is a whole notch. Counts of ball travel per notch at 600 CPI. Tested: stock
+   1.0 / 0.3 and 8.0 / 8.0 were both far too fast. */
+#undef PLOOPY_DRAGSCROLL_DIVISOR_H
+#define PLOOPY_DRAGSCROLL_DIVISOR_H 40.0
+#undef PLOOPY_DRAGSCROLL_DIVISOR_V
+#define PLOOPY_DRAGSCROLL_DIVISOR_V 40.0
+
+/* Net ball travel needed to fire a gesture, scaled for unaccelerated 600 CPI. */
+#undef POINTING_DEVICE_GESTURES_THRESHOLD
+#define POINTING_DEVICE_GESTURES_THRESHOLD 100
