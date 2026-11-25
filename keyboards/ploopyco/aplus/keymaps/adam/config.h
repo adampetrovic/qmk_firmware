@@ -29,11 +29,11 @@
 
 /* macOS does not honour the hi-res wheel multiplier, so each drag scroll unit
    is a whole notch. Counts of ball travel per notch at 600 CPI. Tested: stock
-   1.0 / 0.3 and 8.0 / 8.0 were both far too fast. */
+   1.0 / 0.3 and 8.0 / 8.0 were both far too fast; 40.0 still a bit fast. */
 #undef PLOOPY_DRAGSCROLL_DIVISOR_H
-#define PLOOPY_DRAGSCROLL_DIVISOR_H 40.0
+#define PLOOPY_DRAGSCROLL_DIVISOR_H 60.0
 #undef PLOOPY_DRAGSCROLL_DIVISOR_V
-#define PLOOPY_DRAGSCROLL_DIVISOR_V 40.0
+#define PLOOPY_DRAGSCROLL_DIVISOR_V 60.0
 
 /* Net ball travel needed to fire a gesture, scaled for unaccelerated 600 CPI. */
 #undef POINTING_DEVICE_GESTURES_THRESHOLD
