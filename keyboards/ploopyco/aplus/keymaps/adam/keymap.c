@@ -186,12 +186,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Argument order is matrix [0,1] [0,2] [0,3] [0,4] / [0,0] [0,5] / [0,6] [0,7],
     // which in the rotated view is: lower-right, near-right, near-left, lower-left /
     // upper-right (bootmagic key), upper-left / far-right wheel, far-left wheel.
-    [LAYER_NAV_RIGHT_HANDED] = LAYOUT(  MS_BTN5, PKC_GESTURE, PKC_DRAG_SCROLL, MS_BTN1, 
-                                        MS_BTN2, MS_BTN4, 
+    [LAYER_NAV_RIGHT_HANDED] = LAYOUT(  MS_BTN4, PKC_GESTURE, PKC_DRAG_SCROLL, MS_BTN1, 
+                                        MS_BTN2, MS_BTN5, 
                                         TG(LAYER_CONTROL), MS_BTN3 ),
     // Mirror-image of right-handed layout for lefties.
-    [LAYER_NAV_LEFT_HANDED] = LAYOUT(   MS_BTN1, PKC_DRAG_SCROLL, PKC_GESTURE, MS_BTN5, 
-                                        MS_BTN4, MS_BTN2, 
+    [LAYER_NAV_LEFT_HANDED] = LAYOUT(   MS_BTN1, PKC_DRAG_SCROLL, PKC_GESTURE, MS_BTN4, 
+                                        MS_BTN5, MS_BTN2, 
                                         MS_BTN3, TG(LAYER_CONTROL) ),
     // Layer for all of the customization options.
     [LAYER_CONTROL] = LAYOUT(           PKC_BLINKY_DPI_CONFIG, PKC_ADJUST_LED_BRIGHTNESS, PKC_TGL_VERT_SCRL, PKC_TGL_HORIZ_SCRL,
